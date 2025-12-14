@@ -4,11 +4,12 @@ uniform float max_b = 1.;
 uniform float min_b = 0.;
 
 uniform sampler2D from;
+uniform sampler2D gradient;
 
 void fragment() {
-	float b = texture(from, UV).g;
+	float b = texture(from, UV).r;
 	float s = (b - min_b) / (max_b - min_b);
-	COLOR.rgb = vec3(s, s, s);
+	COLOR.rgb = texture(gradient, vec2(s, 0.0)).rgb;
 }
 
 //void light() {

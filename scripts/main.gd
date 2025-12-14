@@ -12,8 +12,8 @@ var use_a := false
 @export var run_name := "f055_k062"
 @export var d_a := 1.0
 @export var d_b := 0.5
-@export var f := 0.055
-@export var k := 0.062
+@export_range(0.0, 1.0, 0.0001) var f := 0.055
+@export_range(0.0, 1.0, 0.0001) var k := 0.062
 @export var dt := 1.0
 @export var noise_scale := 1.0
 @export var noise_gen_scale := 1.0
@@ -21,12 +21,64 @@ var use_a := false
 @export var time_until_refresh := 0.1
 @export var use_adv_setup := true
 
+@export var gen_map := false
+
+@export var gen_fourier_transform := false
+
+var f_vals := [0.001, 0.060, 0.001]
+var k_vals := [0.001, 0.060, 0.001]
+
+var gl_sum := 0.0
+var gl_iters := 0
+var gl_max := 0.0
+var gl_recent_max := 0.0
+var gl_det := 0.0
+var things
 
 func _ready():
+	Engine.max_fps = 600
+	
+	if gen_map:
+		
+		var time_str = Time.get_datetime_string_from_system().replace(":", "-")
+		var file := FileAccess.open("res://saves/" + time_str + ".txt", FileAccess.WRITE_READ)
+		
+		var f_t : float = f_vals[0]
+		while f_t <  f_vals[1]:
+			f_t += f_vals[2]
+			var k_t : float = k_vals[0]
+			while k_t < k_vals[1]:
+				k_t += k_vals[2]
+				
+				f = f_t
+				k = k_t
+				
+				gl_recent_max = 0
+				gl_iters = 0
+				gl_max = 0
+				gl_sum = 0
+				gl_det = 0
+				
+				print("===== iter started =====")
+				print(f, " ", k)
+				
+				ready(false)
+				await get_tree().create_timer(2.2).timeout
+				
+				print(f, " ", k)
+				file.seek_end()
+				file.store_string(str(f)+" "+str(k)+" "+str(gl_iters)+" "+str(gl_max)+" "+
+								  str(gl_sum)+" "+str(gl_recent_max)+" "+str(gl_det)+"\n")
+		file.close()
+	else:
+		ready()
+
+func ready(update_bars := true):
 	get_node("%FSlider").value = f
 	get_node("%KSlider").value = k
-	_on_f_slider_drag_ended(f)
-	_on_k_slider_drag_ended(k)
+	if update_bars:
+		_on_f_slider_drag_ended(f)
+		_on_k_slider_drag_ended(k)
 	for viewport in viewports:
 		viewport.size = screen_size
 		viewport.get_node("Sprite2D").material.set_shader_parameter("d_a", d_a)
@@ -40,11 +92,19 @@ func _ready():
 	
 	if use_adv_setup:
 		
-		var b = f + sqrt(f * f - 4 * f * (f+k) * (f+k) ) / (2 * (f + k))
+		print("debug ", f, " ", k, " ", f*f, " ", 4 * f * (f+k) * (f+k) )
+		var det = f * f - 4 * f * (f+k) * (f+k)
+		print("determinant: ", det)
+		gl_det = det
+		
+		var b = (f + sqrt( max( det , 0) )) / (2 * (f + k))
+		var a = (k + f) / b
+		
+		print("constant a,b values = ", a, " ", b)
 		
 		for x in range(0, screen_size.x):
 			for y in range(0, screen_size.y):
-				img.set_pixel(x, y, Color( (k + f) / b , b , 0, 1)) 
+				img.set_pixel(x, y, Color(a, b, 0, 1)) 
 		
 	else:
 		
@@ -98,16 +158,35 @@ func display():
 	var max_b = 0.0;
 	
 	if use_adv_setup:
-		var edge_offset = 50;
+		var edge_offset = 200;
 		for x in range(edge_offset, screen_size.x-edge_offset):
 			for y in range(edge_offset, screen_size.y-edge_offset):
 				var col = image.get_pixel(x, y)
-				min_b = min(min_b, col.g)
-				max_b = max(max_b, col.g)
-		print(min_b, max_b)
+				min_b = min(min_b, col.r)
+				max_b = max(max_b, col.r)
+		
+		#if randi() % 100 == 1:
+			#print(min_b, max_b)
+		gl_sum += max_b - min_b
+		gl_iters += 1
+		gl_max = max(gl_max, max_b)
+		gl_recent_max = max_b
 		output_sprite.material.set_shader_parameter("max_b", max_b)
 		output_sprite.material.set_shader_parameter("min_b", min_b)
-
+	
+	if gen_fourier_transform:
+		for x in range(screen_size.x):
+			for y in range(screen_size.y):
+				var value := 0.0
+				for i in range(screen_size.x):
+					for j in range(screen_size.y):
+						var angle: float = -2*PI*(x*i/screen_size.x + y*j/screen_size.y)
+						var real = image.get_pixel(i, j).get_luminance() * sin(angle)
+						var im = image.get_pixel(i, j).get_luminance() * cos(angle)
+						value += real
+				if randi() % 200 == 1:
+					print(x, " ", y, " ", value)
+				#image.set_pixel(x, y, Color(value, value, value))
 	var imgs = ImageTexture.create_from_image(image)
 	output_sprite.material.set_shader_parameter("from", imgs)
 
@@ -142,7 +221,8 @@ func click():
 	from.get_node("Sprite2D").material.set_shader_parameter("prev", tex)
 
 func save():
-	$Sprite2D.texture.get_image().save_png("res://saves/"+run_name+".png")
+	var na = "f" + str(f).trim_prefix("0.") + "_k" + str(k).trim_prefix("0.")
+	$Sprite2D.texture.get_image().save_png("res://saves/"+na+".png")
 
 
 func _on_f_slider_drag_ended(value_changed):

@@ -1,14 +1,22 @@
-[gd_scene load_steps=15 format=3 uid="uid://155xx7s6y6ta"]
+[gd_scene load_steps=17 format=3 uid="uid://155xx7s6y6ta"]
 
 [ext_resource type="Script" uid="uid://cii5hxk58i6ok" path="res://scripts/main.gd" id="1_0wfyh"]
 [ext_resource type="Shader" uid="uid://bbncwc56g5fg0" path="res://shaders/diffusion.gdshader" id="1_o5qli"]
 [ext_resource type="Shader" uid="uid://bow6ppvauqc2f" path="res://shaders/visualize.gdshader" id="2_jyhfs"]
 [ext_resource type="Texture2D" uid="uid://7p074le33rpt" path="res://assets/sprite.png" id="4_jyhfs"]
 
+[sub_resource type="Gradient" id="Gradient_jyhfs"]
+offsets = PackedFloat32Array(0, 0.2631579, 0.46842104, 0.70526314, 0.9526316)
+colors = PackedColorArray(0, 0.101960786, 0.3019608, 1, 0, 0.45490196, 0.8509804, 1, 0.49803922, 0.85882354, 1, 1, 1, 0.52156866, 0.105882354, 1, 1, 0.25490198, 0.21176471, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_tbgi4"]
+gradient = SubResource("Gradient_jyhfs")
+
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_tbgi4"]
 shader = ExtResource("2_jyhfs")
 shader_parameter/max_b = 1.0
 shader_parameter/min_b = 0.0
+shader_parameter/gradient = SubResource("GradientTexture1D_tbgi4")
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_jyhfs"]
 shader = ExtResource("1_o5qli")
@@ -60,7 +68,8 @@ noise = SubResource("FastNoiseLite_jyhfs")
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_0wfyh")
-dt = 0.1
+f = 0.028
+k = 0.054
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 material = SubResource("ShaderMaterial_tbgi4")
@@ -131,7 +140,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 max_value = 0.2
-step = 0.002
+step = 0.001
 value = 0.04
 
 [node name="FLabel" type="Label" parent="CanvasLayer/VBoxContainer/f"]
@@ -151,7 +160,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 max_value = 0.2
-step = 0.002
+step = 0.001
 
 [node name="KLabel" type="Label" parent="CanvasLayer/VBoxContainer/k"]
 unique_name_in_owner = true
