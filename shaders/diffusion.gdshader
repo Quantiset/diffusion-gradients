@@ -5,15 +5,19 @@ shader_type canvas_item;
 // g = B concentration
 uniform sampler2D prev : filter_nearest, repeat_enable;
 
-uniform float d_a = 1.0;
-uniform float d_b = 0.5;
-
-uniform float f = 0.055;
-uniform float k = 0.062;
+uniform float r = 1.0;
+uniform float s = 1.0;
 
 uniform float dt = 1.0;
 
 uniform float noise_scale = 0.0;
+
+uniform float min_a = 0.0;
+uniform float max_a = 9999.9;
+uniform float min_b = 0.0;
+uniform float max_b = 9999.9;
+
+uniform float laplace_divisor = 6.0;
 
 vec2 wrap(vec2 uv) {
 	return vec2(
@@ -40,25 +44,25 @@ void fragment() {
 	
 	vec4 col = texture(prev, UV);
 	
-	float laplace_a =
-		+ 0.20 * (left[0] + top[0] + right[0] + bottom[0])
-		+ 0.05 * (topleft[0] + topright[0] + bottomleft[0] + bottomright[0])
-		- 1.00 * a;
-
-	float laplace_b =
-		+ 0.20 * (left[1] + top[1] + right[1] + bottom[1])
-		+ 0.05 * (topleft[1] + topright[1] + bottomleft[1] + bottomright[1])
-		- 1.00 * b;
+	float laplace_a = (
+		+ 4.0 * (left[0] + top[0] + right[0] + bottom[0])
+		+ 1.0 * (topleft[0] + topright[0] + bottomleft[0] + bottomright[0])
+		- 20.0 * a
+	) / laplace_divisor;
+	float laplace_b =(
+		+ 4.0 * (left[1] + top[1] + right[1] + bottom[1])
+		+ 1.0 * (topleft[1] + topright[1] + bottomleft[1] + bottomright[1])
+		- 20.0 * b
+	) / laplace_divisor;
 	
-	float noise = (fract(sin(dot(UV*2300.0, vec2(16.9898,78.233))) * 43758.5453) - 0.5) * 0.001;
+	float noise = (fract(sin(dot(UV*2300.0, vec2(16.9898,78.233))) * 43758.5453) - 0.5) * 0.01;
 	noise *= noise_scale;
 	
-	float reaction = a * b * b;
-	float new_a = a + (d_a * laplace_a - reaction + f * (1.0 - a)) * dt;
-	float new_b = b + (d_b * laplace_b + reaction - (k + f + noise) * b) * dt;
+	float new_a = a + dt * (16.0 - a*b + r*s*laplace_a);
+	float new_b = b + dt * (a*b - b - 12.0 + s*laplace_b);
 	
-	new_a = clamp(new_a, 0.0, 1.0);
-	new_b = clamp(new_b, 0.0, 1.0);
+	new_a = clamp(new_a, min_a, max_a);
+	new_b = clamp(new_b, min_b, max_b);
 	
 	COLOR = vec4(new_a, new_b, 0., 1.0);
 }

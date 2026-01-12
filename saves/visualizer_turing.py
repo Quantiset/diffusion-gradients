@@ -2,8 +2,8 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 
-f_min, f_max = 0.0001, 0.1
-k_min, k_max = 0.0001, 0.1
+f_min, f_max = 0.0001, 0.06
+k_min, k_max = 0.0001, 0.06
 resolution = 400
 
 f_vals = np.linspace(f_min, f_max, resolution)

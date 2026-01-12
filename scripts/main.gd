@@ -1,4 +1,5 @@
 extends Node2D
+#https://mgmalheiros.github.io/research/leopard/leopard-2020-preprint.pdf
 
 var screen_size := Vector2i(1028, 578)
 
@@ -10,11 +11,14 @@ var use_a := false
 @onready var viewports = [viewport1, viewport2]
 
 @export var run_name := "f055_k062"
-@export var d_a := 1.0
-@export var d_b := 0.5
-@export_range(0.0, 1.0, 0.0001) var f := 0.055
-@export_range(0.0, 1.0, 0.0001) var k := 0.062
+@export var r := 1.0
+@export var s := 1.0
 @export var dt := 1.0
+@export var min_a := 0.0
+@export var max_a := 99999.9
+@export var min_b := 0.0
+@export var max_b := 99999.9
+
 @export var noise_scale := 1.0
 @export var noise_gen_scale := 1.0
 
@@ -25,8 +29,8 @@ var use_a := false
 
 @export var gen_fourier_transform := false
 
-var f_vals := [0.001, 0.060, 0.001]
-var k_vals := [0.001, 0.060, 0.001]
+var r_vals := [1.0, 40.0, 0.5]
+var s_vals := [1.0, 6.0, 0.5]
 
 var gl_sum := 0.0
 var gl_iters := 0
@@ -36,22 +40,22 @@ var gl_det := 0.0
 var things
 
 func _ready():
-	Engine.max_fps = 600
+	Engine.max_fps = 300
 	
 	if gen_map:
 		
 		var time_str = Time.get_datetime_string_from_system().replace(":", "-")
 		var file := FileAccess.open("res://saves/" + time_str + ".txt", FileAccess.WRITE_READ)
 		
-		var f_t : float = f_vals[0]
-		while f_t <  f_vals[1]:
-			f_t += f_vals[2]
-			var k_t : float = k_vals[0]
-			while k_t < k_vals[1]:
-				k_t += k_vals[2]
+		var r_t : float = r_vals[0]
+		while r_t <  r_vals[1]:
+			r_t += r_vals[2]
+			var s_t : float = s_vals[0]
+			while s_t < s_vals[1]:
+				s_t += s_vals[2]
 				
-				f = f_t
-				k = k_t
+				r = r_t
+				s = s_t
 				
 				gl_recent_max = 0
 				gl_iters = 0
@@ -60,64 +64,60 @@ func _ready():
 				gl_det = 0
 				
 				print("===== iter started =====")
-				print(f, " ", k)
+				print(r, " ", s)
 				
 				ready(false)
 				await get_tree().create_timer(2.2).timeout
 				
-				print(f, " ", k)
+				print(r, " ", r)
 				file.seek_end()
-				file.store_string(str(f)+" "+str(k)+" "+str(gl_iters)+" "+str(gl_max)+" "+
+				file.store_string(str(r)+" "+str(s)+" "+str(gl_iters)+" "+str(gl_max)+" "+
 								  str(gl_sum)+" "+str(gl_recent_max)+" "+str(gl_det)+"\n")
 		file.close()
 	else:
 		ready()
 
 func ready(update_bars := true):
-	get_node("%FSlider").value = f
-	get_node("%KSlider").value = k
+	get_node("%FSlider").text = str(r)
+	get_node("%KSlider").text = str(s)
 	if update_bars:
-		_on_f_slider_drag_ended(f)
-		_on_k_slider_drag_ended(k)
+		_on_f_slider_drag_ended(r)
+		_on_k_slider_drag_ended(s)
 	for viewport in viewports:
 		viewport.size = screen_size
-		viewport.get_node("Sprite2D").material.set_shader_parameter("d_a", d_a)
-		viewport.get_node("Sprite2D").material.set_shader_parameter("d_b", d_b)
-		viewport.get_node("Sprite2D").material.set_shader_parameter("f", f)
-		viewport.get_node("Sprite2D").material.set_shader_parameter("k", k)
+		viewport.get_node("Sprite2D").material.set_shader_parameter("r", r)
+		viewport.get_node("Sprite2D").material.set_shader_parameter("s", s)
 		viewport.get_node("Sprite2D").material.set_shader_parameter("dt", dt)
+		viewport.get_node("Sprite2D").material.set_shader_parameter("min_a", min_a)
+		viewport.get_node("Sprite2D").material.set_shader_parameter("max_a", max_a)
+		viewport.get_node("Sprite2D").material.set_shader_parameter("min_b", min_b)
+		viewport.get_node("Sprite2D").material.set_shader_parameter("max_b", max_b)
 		viewport.get_node("Sprite2D").material.set_shader_parameter("noise_scale", noise_scale)
 	
 	var img := Image.create(screen_size.x, screen_size.y, false, Image.FORMAT_RGBAF)
 	
+	var noise : FastNoiseLite = $NoisePattern.texture.noise
+	
 	if use_adv_setup:
-		
-		print("debug ", f, " ", k, " ", f*f, " ", 4 * f * (f+k) * (f+k) )
-		var det = f * f - 4 * f * (f+k) * (f+k)
-		print("determinant: ", det)
-		gl_det = det
-		
-		var b = (f + sqrt( max( det , 0) )) / (2 * (f + k))
-		var a = (k + f) / b
-		
-		print("constant a,b values = ", a, " ", b)
 		
 		for x in range(0, screen_size.x):
 			for y in range(0, screen_size.y):
-				img.set_pixel(x, y, Color(a, b, 0, 1)) 
+				var n := 0.0
+				if int((float(y) / screen_size.y) * 20) == 10:
+					n = 1.0
+				img.set_pixel(x, y, Color(4, 4+randf(), 0, 1)) 
 		
 	else:
 		
-		var noise : FastNoiseLite = $NoisePattern.texture.noise
-		
 		for x in range(0, screen_size.x):
 			for y in range(0, screen_size.y):
-				img.set_pixel(x, y, Color( 1 , noise.get_noise_2d(x, y) , 0, 1)) 
+				var n = noise.get_noise_2d(x, y)
+				img.set_pixel(x, y, Color( 1 , n , 0, 1)) 
 		
 		var mid_size = 5
 		for x in range(screen_size.x/2 - mid_size, screen_size.x/2 + mid_size):
 			for y in range(screen_size.y/2 - mid_size, screen_size.y/2 + mid_size):
-				img.set_pixel(x, y, Color( 1 , 1 , 0, 1)) 
+				img.set_pixel(x, y, Color( 0 , 0 , 0, 1)) 
 	
 	var new_tex := ImageTexture.create_from_image(img)
 	viewport1.get_node("Sprite2D").material.set_shader_parameter("prev", new_tex)
@@ -154,7 +154,7 @@ func display():
 	var from = viewport1 if use_a else viewport2
 	var tex = from.get_texture()
 	var image = tex.get_image()
-	var min_b = 1.0;
+	var min_b = 9999999.0;
 	var max_b = 0.0;
 	
 	if use_adv_setup:
@@ -162,11 +162,11 @@ func display():
 		for x in range(edge_offset, screen_size.x-edge_offset):
 			for y in range(edge_offset, screen_size.y-edge_offset):
 				var col = image.get_pixel(x, y)
-				min_b = min(min_b, col.r)
-				max_b = max(max_b, col.r)
+				min_b = min(min_b, col.g)
+				max_b = max(max_b, col.g)
 		
-		#if randi() % 100 == 1:
-			#print(min_b, max_b)
+		print(min_b, " ", max_b)
+		
 		gl_sum += max_b - min_b
 		gl_iters += 1
 		gl_max = max(gl_max, max_b)
@@ -221,20 +221,20 @@ func click():
 	from.get_node("Sprite2D").material.set_shader_parameter("prev", tex)
 
 func save():
-	var na = "f" + str(f).trim_prefix("0.") + "_k" + str(k).trim_prefix("0.")
+	var na = "r" + str(r).trim_prefix("0.") + "_s" + str(s).trim_prefix("0.")
 	$Sprite2D.texture.get_image().save_png("res://saves/"+na+".png")
 
 
 func _on_f_slider_drag_ended(value_changed):
-	var new_f := float(get_node("%FSlider").value)
-	get_node("%FLabel").text = str(new_f)
-	f = new_f
+	var new_r := float(get_node("%FSlider").text)
+	get_node("%FLabel").text = str(new_r)
+	r = new_r
 	for viewport in viewports: 
-		viewport.get_node("Sprite2D").material.set_shader_parameter("f", f)
+		viewport.get_node("Sprite2D").material.set_shader_parameter("r", r)
 
 func _on_k_slider_drag_ended(value_changed):
-	var new_k := float(get_node("%KSlider").value)
-	get_node("%KLabel").text = str(new_k)
-	k = new_k
+	var new_s := float(get_node("%KSlider").text)
+	get_node("%KLabel").text = str(new_s)
+	s = new_s
 	for viewport in viewports: 
-		viewport.get_node("Sprite2D").material.set_shader_parameter("k", k)
+		viewport.get_node("Sprite2D").material.set_shader_parameter("s", s)
