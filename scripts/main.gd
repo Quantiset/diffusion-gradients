@@ -1,7 +1,7 @@
 extends Node2D
 #https://mgmalheiros.github.io/research/leopard/leopard-2020-preprint.pdf
 
-var screen_size := Vector2i(1028, 578)
+var screen_size := Vector2i(1028, 1028)
 
 var use_a := false
 
@@ -11,13 +11,15 @@ var use_a := false
 @onready var viewports = [viewport1, viewport2]
 
 @export var run_name := "f055_k062"
-@export var r := 1.0
-@export var s := 1.0
-@export var dt := 1.0
+@export var r := 4.0
+@export var s := 4.0
+@export var dt := 0.005
+@export var laplace_divisor := 4.0
+@export var diff_factor := 0.005
 @export var min_a := 0.0
-@export var max_a := 99999.9
+@export var max_a := 999.9
 @export var min_b := 0.0
-@export var max_b := 99999.9
+@export var max_b := 999.9
 
 @export var noise_scale := 1.0
 @export var noise_gen_scale := 1.0
@@ -67,9 +69,9 @@ func _ready():
 				print(r, " ", s)
 				
 				ready(false)
-				await get_tree().create_timer(2.2).timeout
+				await get_tree().create_timer(3.2).timeout
 				
-				print(r, " ", r)
+				print(r, " ", s)
 				file.seek_end()
 				file.store_string(str(r)+" "+str(s)+" "+str(gl_iters)+" "+str(gl_max)+" "+
 								  str(gl_sum)+" "+str(gl_recent_max)+" "+str(gl_det)+"\n")
@@ -88,6 +90,8 @@ func ready(update_bars := true):
 		viewport.get_node("Sprite2D").material.set_shader_parameter("r", r)
 		viewport.get_node("Sprite2D").material.set_shader_parameter("s", s)
 		viewport.get_node("Sprite2D").material.set_shader_parameter("dt", dt)
+		viewport.get_node("Sprite2D").material.set_shader_parameter("laplace_divisor", laplace_divisor)
+		viewport.get_node("Sprite2D").material.set_shader_parameter("diff_factor", diff_factor)
 		viewport.get_node("Sprite2D").material.set_shader_parameter("min_a", min_a)
 		viewport.get_node("Sprite2D").material.set_shader_parameter("max_a", max_a)
 		viewport.get_node("Sprite2D").material.set_shader_parameter("min_b", min_b)
@@ -105,19 +109,21 @@ func ready(update_bars := true):
 				var n := 0.0
 				if int((float(y) / screen_size.y) * 20) == 10:
 					n = 1.0
-				img.set_pixel(x, y, Color(4, 4+randf(), 0, 1)) 
+				#img.set_pixel(x, y, Color(4, 4+n*(1+randf()*0.5), 0, 1)) 
+				img.set_pixel(x, y, Color(4, 4+randf()*0.01, 0, 1)) 
+		
 		
 	else:
 		
 		for x in range(0, screen_size.x):
 			for y in range(0, screen_size.y):
-				var n = noise.get_noise_2d(x, y)
-				img.set_pixel(x, y, Color( 1 , n , 0, 1)) 
+				var n = (noise.get_noise_2d(x, y) + 1) * 0.4
+				img.set_pixel(x, y, Color( 4 , 4 + n , 0, 1)) 
 		
-		var mid_size = 5
-		for x in range(screen_size.x/2 - mid_size, screen_size.x/2 + mid_size):
-			for y in range(screen_size.y/2 - mid_size, screen_size.y/2 + mid_size):
-				img.set_pixel(x, y, Color( 0 , 0 , 0, 1)) 
+		#var mid_size = 5
+		#for x in range(screen_size.x/2 - mid_size, screen_size.x/2 + mid_size):
+			#for y in range(screen_size.y/2 - mid_size, screen_size.y/2 + mid_size):
+				#img.set_pixel(x, y, Color( 0 , 0 , 0, 1)) 
 	
 	var new_tex := ImageTexture.create_from_image(img)
 	viewport1.get_node("Sprite2D").material.set_shader_parameter("prev", new_tex)
@@ -154,25 +160,29 @@ func display():
 	var from = viewport1 if use_a else viewport2
 	var tex = from.get_texture()
 	var image = tex.get_image()
-	var min_b = 9999999.0;
-	var max_b = 0.0;
+	var min_b_t = 9999999.0;
+	var max_b_t = 0.0;
 	
-	if use_adv_setup:
-		var edge_offset = 200;
-		for x in range(edge_offset, screen_size.x-edge_offset):
-			for y in range(edge_offset, screen_size.y-edge_offset):
-				var col = image.get_pixel(x, y)
-				min_b = min(min_b, col.g)
-				max_b = max(max_b, col.g)
-		
-		print(min_b, " ", max_b)
-		
-		gl_sum += max_b - min_b
-		gl_iters += 1
-		gl_max = max(gl_max, max_b)
-		gl_recent_max = max_b
-		output_sprite.material.set_shader_parameter("max_b", max_b)
-		output_sprite.material.set_shader_parameter("min_b", min_b)
+	var edge_offset = 410;
+	var pxs := 0;
+	var contrib := 0.0;
+	
+	for x in range(edge_offset, screen_size.x-edge_offset):
+		for y in range(edge_offset, screen_size.y-edge_offset):
+			var col = image.get_pixel(x, y)
+			min_b_t = min(min_b_t, col.g)
+			max_b_t = max(max_b_t, col.g)
+			pxs += 1
+			contrib += col.g;
+	
+	print("Min: ", min_b_t, " Max: ", max_b_t, " Avg: ", contrib/pxs)
+	
+	gl_sum += max_b_t - min_b_t
+	gl_iters += 1
+	gl_max = max(gl_max, max_b_t)
+	gl_recent_max = max_b_t
+	output_sprite.material.set_shader_parameter("max_b", max_b_t)
+	output_sprite.material.set_shader_parameter("min_b", min_b_t)
 	
 	if gen_fourier_transform:
 		for x in range(screen_size.x):

@@ -8,7 +8,7 @@ var texture_b: RID
 var uniform_set_a: RID
 var uniform_set_b: RID
 var width := 1028
-var height := 578
+var height := 1028
 var use_a := true
 
 func _ready():

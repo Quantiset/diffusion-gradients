@@ -6,8 +6,8 @@
 [ext_resource type="Texture2D" uid="uid://7p074le33rpt" path="res://assets/sprite.png" id="4_jyhfs"]
 
 [sub_resource type="Gradient" id="Gradient_jyhfs"]
-offsets = PackedFloat32Array(0, 0.2631579, 0.46842104, 0.70526314, 0.9526316)
-colors = PackedColorArray(0, 0.101960786, 0.3019608, 1, 0, 0.45490196, 0.8509804, 1, 0.49803922, 0.85882354, 1, 1, 1, 0.52156866, 0.105882354, 1, 1, 0.25490198, 0.21176471, 1)
+offsets = PackedFloat32Array(0, 0.4814815, 1)
+colors = PackedColorArray(1, 1, 1, 1, 0.48677248, 0.65784836, 1, 1, 0, 0.3333335, 1, 1)
 
 [sub_resource type="GradientTexture1D" id="GradientTexture1D_tbgi4"]
 gradient = SubResource("Gradient_jyhfs")
@@ -29,13 +29,14 @@ shader_parameter/max_a = 9999.9
 shader_parameter/min_b = 0.0
 shader_parameter/max_b = 9999.9
 shader_parameter/laplace_divisor = 6.0
+shader_parameter/diff_factor = 1.0
 
 [sub_resource type="Gradient" id="Gradient_sgp6g"]
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_o5qli"]
 gradient = SubResource("Gradient_sgp6g")
 width = 1028
-height = 578
+height = 1028
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_sugp2"]
 shader = ExtResource("1_o5qli")
@@ -48,6 +49,7 @@ shader_parameter/max_a = 9999.9
 shader_parameter/min_b = 0.0
 shader_parameter/max_b = 9999.9
 shader_parameter/laplace_divisor = 6.0
+shader_parameter/diff_factor = 1.0
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_tbgi4"]
 texture = ExtResource("4_jyhfs")
@@ -74,18 +76,13 @@ noise = SubResource("FastNoiseLite_jyhfs")
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_0wfyh")
-r = 7.0
-dt = 0.005
-max_a = 99.0
-max_b = 99.0
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 material = SubResource("ShaderMaterial_tbgi4")
 centered = false
 
 [node name="Camera2D" type="Camera2D" parent="."]
-position = Vector2(514, 289)
-zoom = Vector2(2, 2)
+position = Vector2(514, 514)
 
 [node name="SubViewport1" type="SubViewport" parent="."]
 disable_3d = true
@@ -93,7 +90,7 @@ handle_input_locally = false
 use_hdr_2d = true
 canvas_item_default_texture_filter = 0
 gui_disable_input = true
-size = Vector2i(1028, 578)
+size = Vector2i(1028, 1028)
 render_target_update_mode = 4
 
 [node name="Sprite2D" type="Sprite2D" parent="SubViewport1"]
@@ -109,7 +106,7 @@ handle_input_locally = false
 use_hdr_2d = true
 canvas_item_default_texture_filter = 0
 gui_disable_input = true
-size = Vector2i(1028, 578)
+size = Vector2i(1028, 1028)
 render_target_update_mode = 4
 
 [node name="Sprite2D" type="Sprite2D" parent="SubViewport2"]
