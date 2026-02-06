@@ -1,9 +1,10 @@
-[gd_scene load_steps=17 format=3 uid="uid://155xx7s6y6ta"]
+[gd_scene format=3 uid="uid://155xx7s6y6ta"]
 
 [ext_resource type="Script" uid="uid://cii5hxk58i6ok" path="res://scripts/main.gd" id="1_0wfyh"]
 [ext_resource type="Shader" uid="uid://bbncwc56g5fg0" path="res://shaders/diffusion.gdshader" id="1_o5qli"]
 [ext_resource type="Shader" uid="uid://bow6ppvauqc2f" path="res://shaders/visualize.gdshader" id="2_jyhfs"]
 [ext_resource type="Texture2D" uid="uid://7p074le33rpt" path="res://assets/sprite.png" id="4_jyhfs"]
+[ext_resource type="Texture2D" uid="uid://crr56bk5arnso" path="res://assets/obluenoise256.png" id="4_tbgi4"]
 
 [sub_resource type="Gradient" id="Gradient_jyhfs"]
 offsets = PackedFloat32Array(0, 0.4814815, 1)
@@ -20,6 +21,7 @@ shader_parameter/gradient = SubResource("GradientTexture1D_tbgi4")
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_jyhfs"]
 shader = ExtResource("1_o5qli")
+shader_parameter/noise_tex = ExtResource("4_tbgi4")
 shader_parameter/r = 1.0
 shader_parameter/s = 1.0
 shader_parameter/dt = 1.0
@@ -28,15 +30,16 @@ shader_parameter/min_a = 0.0
 shader_parameter/max_a = 9999.9
 shader_parameter/min_b = 0.0
 shader_parameter/max_b = 9999.9
-shader_parameter/laplace_divisor = 6.0
-shader_parameter/diff_factor = 1.0
+shader_parameter/laplace_divisor = 1.0
+shader_parameter/diff_factor = 0.005
 
 [sub_resource type="Gradient" id="Gradient_sgp6g"]
 
 [sub_resource type="GradientTexture2D" id="GradientTexture2D_o5qli"]
 gradient = SubResource("Gradient_sgp6g")
-width = 1028
-height = 1028
+width = 1024
+height = 1024
+use_hdr = true
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_sugp2"]
 shader = ExtResource("1_o5qli")
@@ -48,8 +51,8 @@ shader_parameter/min_a = 0.0
 shader_parameter/max_a = 9999.9
 shader_parameter/min_b = 0.0
 shader_parameter/max_b = 9999.9
-shader_parameter/laplace_divisor = 6.0
-shader_parameter/diff_factor = 1.0
+shader_parameter/laplace_divisor = 1.0
+shader_parameter/diff_factor = 0.005
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_tbgi4"]
 texture = ExtResource("4_jyhfs")
@@ -74,101 +77,103 @@ width = 1028
 height = 578
 noise = SubResource("FastNoiseLite_jyhfs")
 
-[node name="Main" type="Node2D"]
+[node name="Main" type="Node2D" unique_id=254893229]
 script = ExtResource("1_0wfyh")
+gen_map_refresh_each_tick = false
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1934206809]
 material = SubResource("ShaderMaterial_tbgi4")
 centered = false
 
-[node name="Camera2D" type="Camera2D" parent="."]
-position = Vector2(514, 514)
+[node name="Camera2D" type="Camera2D" parent="." unique_id=888028707]
+position = Vector2(512, 512)
 
-[node name="SubViewport1" type="SubViewport" parent="."]
+[node name="SubViewport1" type="SubViewport" parent="." unique_id=1421353219]
 disable_3d = true
 handle_input_locally = false
 use_hdr_2d = true
 canvas_item_default_texture_filter = 0
 gui_disable_input = true
-size = Vector2i(1028, 1028)
+size = Vector2i(1024, 1024)
 render_target_update_mode = 4
 
-[node name="Sprite2D" type="Sprite2D" parent="SubViewport1"]
+[node name="Sprite2D" type="Sprite2D" parent="SubViewport1" unique_id=2000208454]
 texture_filter = 1
 material = SubResource("ShaderMaterial_jyhfs")
 texture = SubResource("GradientTexture2D_o5qli")
 centered = false
 metadata/_edit_lock_ = true
 
-[node name="SubViewport2" type="SubViewport" parent="."]
+[node name="SubViewport2" type="SubViewport" parent="." unique_id=870032161]
 disable_3d = true
 handle_input_locally = false
 use_hdr_2d = true
 canvas_item_default_texture_filter = 0
 gui_disable_input = true
-size = Vector2i(1028, 1028)
+size = Vector2i(1024, 1024)
 render_target_update_mode = 4
 
-[node name="Sprite2D" type="Sprite2D" parent="SubViewport2"]
+[node name="Sprite2D" type="Sprite2D" parent="SubViewport2" unique_id=2080961415]
 texture_filter = 1
 material = SubResource("ShaderMaterial_sugp2")
 texture = SubResource("GradientTexture2D_o5qli")
 centered = false
 metadata/_edit_lock_ = true
 
-[node name="TileMapLayer" type="TileMapLayer" parent="."]
+[node name="TileMapLayer" type="TileMapLayer" parent="." unique_id=506069734]
 tile_set = SubResource("TileSet_o6xl0")
 
-[node name="CanvasLayer" type="CanvasLayer" parent="."]
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=584970378]
 
-[node name="Label" type="Label" parent="CanvasLayer"]
+[node name="Label" type="Label" parent="CanvasLayer" unique_id=1132488730]
 offset_right = 40.0
 offset_bottom = 23.0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="CanvasLayer" unique_id=1050570001]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = 512.0
+offset_top = 432.0
+offset_bottom = -7.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_vertical = 10
 
-[node name="f" type="HBoxContainer" parent="CanvasLayer/VBoxContainer"]
+[node name="f" type="HBoxContainer" parent="CanvasLayer/VBoxContainer" unique_id=1899192353]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="CanvasLayer/VBoxContainer/f"]
+[node name="Label" type="Label" parent="CanvasLayer/VBoxContainer/f" unique_id=1951212705]
 layout_mode = 2
 text = "r"
 
-[node name="FSlider" type="LineEdit" parent="CanvasLayer/VBoxContainer/f"]
+[node name="FSlider" type="LineEdit" parent="CanvasLayer/VBoxContainer/f" unique_id=157127029]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 
-[node name="FLabel" type="Label" parent="CanvasLayer/VBoxContainer/f"]
+[node name="FLabel" type="Label" parent="CanvasLayer/VBoxContainer/f" unique_id=1710979979]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 
-[node name="k" type="HBoxContainer" parent="CanvasLayer/VBoxContainer"]
+[node name="k" type="HBoxContainer" parent="CanvasLayer/VBoxContainer" unique_id=2014551456]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="CanvasLayer/VBoxContainer/k"]
+[node name="Label" type="Label" parent="CanvasLayer/VBoxContainer/k" unique_id=611539854]
 layout_mode = 2
 text = "s"
 
-[node name="KSlider" type="LineEdit" parent="CanvasLayer/VBoxContainer/k"]
+[node name="KSlider" type="LineEdit" parent="CanvasLayer/VBoxContainer/k" unique_id=1095672202]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 
-[node name="KLabel" type="Label" parent="CanvasLayer/VBoxContainer/k"]
+[node name="KLabel" type="Label" parent="CanvasLayer/VBoxContainer/k" unique_id=313013648]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 
-[node name="NoisePattern" type="Sprite2D" parent="."]
+[node name="NoisePattern" type="Sprite2D" parent="." unique_id=1819271214]
 visible = false
 texture = SubResource("NoiseTexture2D_tbgi4")
 centered = false

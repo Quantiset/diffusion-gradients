@@ -1,121 +1,114 @@
 extends Node2D
 
-@onready var sprite := $Sprite2D
+# Constants from MATLAB
+const N = 256
+const S_BASE = 0.005
+const DA = 0.25
+const DB = 0.0625
+const DT = 0.9
 
-# Simulation parameters
-var d_a := 1.0
-var d_b := 0.5
-var f := 0.055
-var k := 0.062
-var dt := 1.0
+# Simulation Arrays (64-bit for precision)
+var a: PackedFloat64Array
+var b: PackedFloat64Array
+var a2: PackedFloat64Array
+var b2: PackedFloat64Array
+var beta: PackedFloat64Array
 
-# Grid data
-var width := 100
-var height := 100
-
-var concentrations_a: PackedFloat32Array
-var concentrations_b: PackedFloat32Array
-var next_a: PackedFloat32Array
-var next_b: PackedFloat32Array
-
-var image: Image
-var texture: ImageTexture
+@onready var sprite = $Sprite2D
 
 func _ready():
 	# Initialize arrays
-	var size := width * height
-	concentrations_a.resize(size)
-	concentrations_b.resize(size)
-	next_a.resize(size)
-	next_b.resize(size)
+	a.resize(N * N)
+	b.resize(N * N)
+	a2.resize(N * N)
+	b2.resize(N * N)
+	beta.resize(N * N)
 	
-	# Fill with initial conditions: A=1, B=0
-	for i in range(size):
-		concentrations_a[i] = 1.0
-		concentrations_b[i] = 0.0
+	for i in range(N * N):
+		a[i] = 4.0
+		b[i] = 4.0
+		a2[i] = 4.0
+		b2[i] = 4.0
+		beta[i] = 12.0 + (randf() * 0.1 - 0.05)
 	
-	# Add seed of B chemical in center
-	var center_x := width / 2
-	var center_y := height / 2
-	for x in range(center_x - 5, center_x + 5):
-		for y in range(center_y - 5, center_y + 5):
-			if x >= 0 and x < width and y >= 0 and y < height:
-				var idx := y * width + x
-				concentrations_b[idx] = 1.0
-	
-	# Create image and texture
-	image = Image.create(width, height, false, Image.FORMAT_RGB8)
-	texture = ImageTexture.create_from_image(image)
-	sprite.texture = texture
-	
-	update_image()
+	sprite.texture = ImageTexture.create_from_image(Image.create(N, N, false, Image.FORMAT_RGB8))
+	sprite.scale = Vector2(2, 2)
 
 func _process(_delta):
-	print(Engine.get_frames_per_second())
-	simulate_step()
-	update_image()
+	for step in range(10):
+		simulate_step()
+	update_visualization()
 
 func simulate_step():
-	# Calculate next state for all cells
-	for y in range(height):
-		for x in range(width):
-			var idx := y * width + x
-			var a := concentrations_a[idx]
-			var b := concentrations_b[idx]
-			
-						# Get neighbor indices (with wrapping)
-						# Flattened indices for cardinal neighbors (with wrap)
-			var left   := y * width + ((x - 1 + width) % width)
-			var right  := y * width + ((x + 1) % width)
-			var top    := ((y - 1 + height) % height) * width + x
-			var bottom := ((y + 1) % height) * width + x
-
-			# Flattened indices for diagonal neighbors (with wrap)
-			var top_left     := ((y - 1 + height) % height) * width + ((x - 1 + width) % width)
-			var top_right    := ((y - 1 + height) % height) * width + ((x + 1) % width)
-			var bottom_left  := ((y + 1) % height) * width + ((x - 1 + width) % width)
-			var bottom_right := ((y + 1) % height) * width + ((x + 1) % width)
-
-			# Center index
-			var center := y * width + x
-
-			# 9-point Laplacian with weights: center=-1, cardinal=0.2, diagonal=0.05
-			var laplace_a := -1.0 * concentrations_a[center] + \
-							 0.2 * (concentrations_a[left] + concentrations_a[right] + concentrations_a[top] + concentrations_a[bottom]) + \
-							 0.05 * (concentrations_a[top_left] + concentrations_a[top_right] + concentrations_a[bottom_left] + concentrations_a[bottom_right])
-
-			var laplace_b := -1.0 * concentrations_b[center] + \
-							 0.2 * (concentrations_b[left] + concentrations_b[right] + concentrations_b[top] + concentrations_b[bottom]) + \
-							 0.05 * (concentrations_b[top_left] + concentrations_b[top_right] + concentrations_b[bottom_left] + concentrations_b[bottom_right])
-			
-			# Gray-Scott reaction-diffusion
-			var reaction := a * b * b
-			var new_a := a + (d_a * laplace_a - reaction + f * (1.0 - a)) * dt
-			var new_b := b + (d_b * laplace_b + reaction - (k + f) * b) * dt
-			
-			# Clamp values
-			next_a[idx] = clampf(new_a, 0.0, 1.0)
-			next_b[idx] = clampf(new_b, 0.0, 1.0)
+	var next_a = a.duplicate()
+	var next_b = b.duplicate()
+	var next_a2 = a2.duplicate()
+	var next_b2 = b2.duplicate()
 	
-	# Swap buffers
-	var temp_a = concentrations_a
-	concentrations_a = next_a
-	next_a = temp_a
+	var min_a = 100.0
+	var max_a = -100.0
+	for val in a:
+		if val < min_a: min_a = val
+		if val > max_a: max_a = val
 	
-	var temp_b = concentrations_b
-	concentrations_b = next_b
-	next_b = temp_b
-
-func update_image():
-	# Convert concentrations to pixel colors
-	for y in range(height):
-		for x in range(width):
-			var idx := y * width + x
-			var b_val := concentrations_b[idx]
+	var range_a = max_a - min_a
+	if range_a < 0.0001: range_a = 1.0 
+	
+	for y in range(N):
+		for x in range(N):
+			var i = y * N + x
 			
-			# Visualize B concentration
-			var gray := int(b_val * 255.0)
-			image.set_pixel(x, y, Color8(gray, gray, gray))
+			var l = y * N + posmod(x - 1, N)
+			var r = y * N + posmod(x + 1, N)
+			var u = posmod(y - 1, N) * N + x
+			var d = posmod(y + 1, N) * N + x
+			
+			var lap_a = a[l] + a[r] + a[u] + a[d] - 4.0 * a[i]
+			var lap_b = b[l] + b[r] + b[u] + b[d] - 4.0 * b[i]
+			var lap_a2 = a2[l] + a2[r] + a2[u] + a2[d] - 4.0 * a2[i]
+			var lap_b2 = b2[l] + b2[r] + b2[u] + b2[d] - 4.0 * b2[i]
+			
+			var delA = S_BASE * (16.0 - a[i] * b[i]) + DA * lap_a
+			var delB = S_BASE * (a[i] * b[i] - b[i] - beta[i]) + DB * lap_b
+			
+			next_a[i] = max(0.0, a[i] + DT * delA)
+			next_b[i] = max(0.0, b[i] + DT * delB)
+			
+			var ref = (a[i] - min_a) / range_a
+			var s_coupled = S_BASE * (4.0 * ref)
+			
+			var delA2 = s_coupled * (16.0 - a2[i] * b2[i]) + DA * lap_a2
+			var delB2 = s_coupled * (a2[i] * b2[i] - b2[i] - beta[i]) + DB * lap_b2
+			
+			next_a2[i] = max(0.0, a2[i] + DT * delA2)
+			next_b2[i] = max(0.0, b2[i] + DT * delB2)
+
+	a = next_a
+	b = next_b
+	a2 = next_a2
+	b2 = next_b2
+
+func update_visualization():
+	var img = Image.create(N, N, false, Image.FORMAT_RGB8)
 	
-	# Update texture
-	texture.update(image)
+	var min_a = 100.0
+	var max_a = -100.0
+	for val in a:
+		min_a = min(min_a, val)
+		max_a = max(max_a, val)
+	
+	var range_a = max_a - min_a
+	
+	for y in range(N):
+		for x in range(N):
+			var val = a[y * N + x]
+			var norm = 0.0
+			if range_a > 0.0001:
+				norm = (val - min_a) / range_a
+			
+			var r = 1.0 - norm
+			var g = 1.0 - norm
+			var blue = 1.0
+			img.set_pixel(x, y, Color(r, g, blue))
+			
+	sprite.texture.update(img)

@@ -1,8 +1,24 @@
-[gd_scene load_steps=2 format=3 uid="uid://d2773vwfrn33y"]
+[gd_scene format=3 uid="uid://d2773vwfrn33y"]
 
 [ext_resource type="Script" uid="uid://kf5mq4q4hy21" path="res://scripts/compute.gd" id="1_lpl2d"]
+[ext_resource type="Shader" uid="uid://bow6ppvauqc2f" path="res://shaders/visualize.gdshader" id="2_d0mxd"]
 
-[node name="compute" type="Node2D"]
+[sub_resource type="Gradient" id="Gradient_d0mxd"]
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_2kr6d"]
+gradient = SubResource("Gradient_d0mxd")
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_2kr6d"]
+shader = ExtResource("2_d0mxd")
+shader_parameter/max_b = 1.0
+shader_parameter/min_b = 0.0
+shader_parameter/gradient = SubResource("GradientTexture1D_2kr6d")
+
+[node name="Compute" type="Node2D" unique_id=191747555]
 script = ExtResource("1_lpl2d")
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=78908338]
+material = SubResource("ShaderMaterial_2kr6d")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1351366231]
+position = Vector2(512, 512)

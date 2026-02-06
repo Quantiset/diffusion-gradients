@@ -1,11 +1,16 @@
-[gd_scene load_steps=2 format=3 uid="uid://bw6uc30cse8c8"]
+[gd_scene format=3 uid="uid://bw6uc30cse8c8"]
 
 [ext_resource type="Script" uid="uid://bwbq0upcp8ohv" path="res://scripts/cpu.gd" id="1_5i68j"]
 
-[node name="cpu" type="Node2D"]
+[node name="cpu" type="Node2D" unique_id=835952248]
 script = ExtResource("1_5i68j")
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1881071462]
 
-[node name="Camera2D" type="Camera2D" parent="."]
-zoom = Vector2(6, 6)
+[node name="Camera2D" type="Camera2D" parent="." unique_id=394840704]
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=1250406825]
+offset_left = -85.0
+offset_top = -86.0
+offset_right = 86.0
+offset_bottom = 86.0

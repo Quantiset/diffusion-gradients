@@ -1,7 +1,7 @@
 extends Node2D
 #https://mgmalheiros.github.io/research/leopard/leopard-2020-preprint.pdf
 
-var screen_size := Vector2i(1028, 1028)
+var screen_size := Vector2i(1024, 1024)
 
 var use_a := false
 
@@ -11,50 +11,53 @@ var use_a := false
 @onready var viewports = [viewport1, viewport2]
 
 @export var run_name := "f055_k062"
-@export var r := 4.0
-@export var s := 4.0
-@export var dt := 0.005
-@export var laplace_divisor := 4.0
-@export var diff_factor := 0.005
+@export_range(0,100,0.00001) var r := 4.0
+@export_range(0,100,0.00001) var s := 0.0625
+@export_range(0,100,0.00001) var dt := 0.9
+@export var laplace_divisor := 1.0
+@export_range(0,100,0.00001) var diff_factor := 0.005
 @export var min_a := 0.0
 @export var max_a := 999.9
 @export var min_b := 0.0
 @export var max_b := 999.9
 
 @export var noise_scale := 1.0
-@export var noise_gen_scale := 1.0
 
 @export var time_until_refresh := 0.1
-@export var use_adv_setup := true
 
 @export var gen_map := false
+@export var gen_map_refresh_each_tick := true
 
 @export var gen_fourier_transform := false
 
-var r_vals := [1.0, 40.0, 0.5]
-var s_vals := [1.0, 6.0, 0.5]
+var r_vals := [5.0, 20.0, 0.5]
+var s_vals := [1.0, 12.0, 0.5]
 
 var gl_sum := 0.0
 var gl_iters := 0
 var gl_max := 0.0
+var gl_avg := 0.0
 var gl_recent_max := 0.0
 var gl_det := 0.0
-var things
+
+var image # temporary place to cache latest image frame
 
 func _ready():
-	Engine.max_fps = 300
+	
+	Engine.max_fps = 200
 	
 	if gen_map:
 		
 		var time_str = Time.get_datetime_string_from_system().replace(":", "-")
 		var file := FileAccess.open("res://saves/" + time_str + ".txt", FileAccess.WRITE_READ)
 		
-		var r_t : float = r_vals[0]
-		while r_t <  r_vals[1]:
-			r_t += r_vals[2]
-			var s_t : float = s_vals[0]
-			while s_t < s_vals[1]:
-				s_t += s_vals[2]
+		var s_t : float = s_vals[0]
+		while s_t <  s_vals[1]:
+			s_t += s_vals[2]
+			var regen_map := true
+			var r_t : float = r_vals[0]
+			while r_t < r_vals[1]:
+				r_t += r_vals[2]
 				
 				r = r_t
 				s = s_t
@@ -64,27 +67,32 @@ func _ready():
 				gl_max = 0
 				gl_sum = 0
 				gl_det = 0
+				gl_avg = 0
 				
 				print("===== iter started =====")
 				print(r, " ", s)
 				
-				ready(false)
-				await get_tree().create_timer(3.2).timeout
+				ready(false, regen_map or gen_map_refresh_each_tick)
+				await get_tree().create_timer(1.7 + 2.0 * int(regen_map and gen_map_refresh_each_tick)).timeout
 				
 				print(r, " ", s)
 				file.seek_end()
 				file.store_string(str(r)+" "+str(s)+" "+str(gl_iters)+" "+str(gl_max)+" "+
-								  str(gl_sum)+" "+str(gl_recent_max)+" "+str(gl_det)+"\n")
+								str(gl_sum)+" "+str(gl_recent_max)+" "+str(gl_det)+" "+
+								str(gl_avg)+" "+str(Anisotropy.describe(image)) + "\n")
+				regen_map = false
 		file.close()
 	else:
 		ready()
 
-func ready(update_bars := true):
+func ready(update_bars := true, refresh_map := true):
 	get_node("%FSlider").text = str(r)
 	get_node("%KSlider").text = str(s)
 	if update_bars:
 		_on_f_slider_drag_ended(r)
 		_on_k_slider_drag_ended(s)
+	print(r, " ", s)
+	
 	for viewport in viewports:
 		viewport.size = screen_size
 		viewport.get_node("Sprite2D").material.set_shader_parameter("r", r)
@@ -98,11 +106,11 @@ func ready(update_bars := true):
 		viewport.get_node("Sprite2D").material.set_shader_parameter("max_b", max_b)
 		viewport.get_node("Sprite2D").material.set_shader_parameter("noise_scale", noise_scale)
 	
-	var img := Image.create(screen_size.x, screen_size.y, false, Image.FORMAT_RGBAF)
-	
-	var noise : FastNoiseLite = $NoisePattern.texture.noise
-	
-	if use_adv_setup:
+	if refresh_map:
+		var img := Image.create(screen_size.x, screen_size.y, false, Image.FORMAT_RGBAF)
+		
+		var noise : FastNoiseLite = $NoisePattern.texture.noise
+		var blue_noise: Image = preload("res://assets/obluenoise256.png").get_image()
 		
 		for x in range(0, screen_size.x):
 			for y in range(0, screen_size.y):
@@ -110,31 +118,20 @@ func ready(update_bars := true):
 				if int((float(y) / screen_size.y) * 20) == 10:
 					n = 1.0
 				#img.set_pixel(x, y, Color(4, 4+n*(1+randf()*0.5), 0, 1)) 
-				img.set_pixel(x, y, Color(4, 4+randf()*0.01, 0, 1)) 
+				#img.set_pixel(x, y, Color(4, 4+blue_noise.get_pixel(x, y).r*1.0, 0, 1))
+				img.set_pixel(x, y, Color(4, 4, 0, 1)) 
+			
 		
+		var new_tex := ImageTexture.create_from_image(img)
+		viewport1.get_node("Sprite2D").material.set_shader_parameter("prev", new_tex)
+		viewport2.get_node("Sprite2D").material.set_shader_parameter("prev", new_tex)
 		
-	else:
+		viewport1.canvas_item_default_texture_filter = viewport1.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
+		viewport2.canvas_item_default_texture_filter = viewport2.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
+		var tex: ViewportTexture = viewport1.get_texture()
+		output_sprite.texture = tex
 		
-		for x in range(0, screen_size.x):
-			for y in range(0, screen_size.y):
-				var n = (noise.get_noise_2d(x, y) + 1) * 0.4
-				img.set_pixel(x, y, Color( 4 , 4 + n , 0, 1)) 
-		
-		#var mid_size = 5
-		#for x in range(screen_size.x/2 - mid_size, screen_size.x/2 + mid_size):
-			#for y in range(screen_size.y/2 - mid_size, screen_size.y/2 + mid_size):
-				#img.set_pixel(x, y, Color( 0 , 0 , 0, 1)) 
-	
-	var new_tex := ImageTexture.create_from_image(img)
-	viewport1.get_node("Sprite2D").material.set_shader_parameter("prev", new_tex)
-	viewport2.get_node("Sprite2D").material.set_shader_parameter("prev", new_tex)
-	
-	viewport1.canvas_item_default_texture_filter = viewport1.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
-	viewport2.canvas_item_default_texture_filter = viewport2.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
-	var tex: ViewportTexture = viewport1.get_texture()
-	output_sprite.texture = tex
-	
-	await get_tree().create_timer(0.5).timeout
+		await get_tree().create_timer(0.2).timeout
 	
 	update()
 
@@ -159,7 +156,7 @@ func _process(delta):
 func display():
 	var from = viewport1 if use_a else viewport2
 	var tex = from.get_texture()
-	var image = tex.get_image()
+	image = tex.get_image()
 	var min_b_t = 9999999.0;
 	var max_b_t = 0.0;
 	
@@ -172,11 +169,13 @@ func display():
 			var col = image.get_pixel(x, y)
 			min_b_t = min(min_b_t, col.g)
 			max_b_t = max(max_b_t, col.g)
+			#print(0.005*(16.0-col.r*col.g), " ", 0.005*(col.r*col.g-col.g-12.0))
 			pxs += 1
 			contrib += col.g;
 	
 	print("Min: ", min_b_t, " Max: ", max_b_t, " Avg: ", contrib/pxs)
 	
+	gl_avg = contrib/pxs
 	gl_sum += max_b_t - min_b_t
 	gl_iters += 1
 	gl_max = max(gl_max, max_b_t)
@@ -184,21 +183,8 @@ func display():
 	output_sprite.material.set_shader_parameter("max_b", max_b_t)
 	output_sprite.material.set_shader_parameter("min_b", min_b_t)
 	
-	if gen_fourier_transform:
-		for x in range(screen_size.x):
-			for y in range(screen_size.y):
-				var value := 0.0
-				for i in range(screen_size.x):
-					for j in range(screen_size.y):
-						var angle: float = -2*PI*(x*i/screen_size.x + y*j/screen_size.y)
-						var real = image.get_pixel(i, j).get_luminance() * sin(angle)
-						var im = image.get_pixel(i, j).get_luminance() * cos(angle)
-						value += real
-				if randi() % 200 == 1:
-					print(x, " ", y, " ", value)
-				#image.set_pixel(x, y, Color(value, value, value))
 	var imgs = ImageTexture.create_from_image(image)
-	output_sprite.material.set_shader_parameter("from", imgs)
+	output_sprite.texture =  imgs
 
 func update():
 	proc()
