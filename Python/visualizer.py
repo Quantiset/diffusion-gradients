@@ -13,7 +13,7 @@ with open(filename, "r") as f:
         if len(parts) >= 4: 
             x = float(parts[0])
             y = float(parts[1])
-            z = parts[4]
+            z = parts[3]
             if z == 'nan':
                 continue
             else:
@@ -27,6 +27,6 @@ sc = plt.scatter(x_vals, y_vals, c=z_vals, cmap="viridis")
 plt.colorbar(sc, label="Max")
 plt.xlabel("r")
 plt.ylabel("s")
-plt.title("Circular-ness by (r, s) Position")
+plt.title("Max by (r, s) Position")
 # plt.savefig("ani_rs.png")
 plt.show()

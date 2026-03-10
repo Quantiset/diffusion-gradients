@@ -81,15 +81,15 @@ for r in r_values:
         print(f" r={r:.3f}, s={s:.3f}")
         print(f"{'='*50}")
         
-        result = sim(r, s, max_steps=5000)
+        result = sim(r, s, max_steps=2000)
         
         if result is None: 
             cv2.destroyAllWindows()
             exit()
         
-        with open("data.txt", "a") as file:
-            line = f"{result['r']:.6f} {result['s']:.6f} {result['min']:.6f} {result['max']:.6f} {result['volatility']:.6f} {result['stripiness']:.6f}\n"
-            file.write(line)
-            print(f"Logged: {line.strip()}")
+        # with open("data.txt", "a") as file:
+        #     line = f"{result['r']:.6f} {result['s']:.6f} {result['min']:.6f} {result['max']:.6f} {result['volatility']:.6f} {result['stripiness']:.6f}\n"
+        #     file.write(line)
+        #     print(f"Logged: {line.strip()}")
 
 cv2.destroyAllWindows()
