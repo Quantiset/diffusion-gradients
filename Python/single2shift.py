@@ -38,7 +38,7 @@ use_blue_noise = True
 shiftx, shifty = 0, 0
 
 
-def step_beta(step=N):
+def step_beta(step=N/10):
     global beta, blue_step, shiftx, shifty
 
     if not use_blue_noise:
@@ -46,11 +46,12 @@ def step_beta(step=N):
         return
 
     blue_step += 1
-    shiftx += random.uniform(0, 1) * step
-    shifty += random.uniform(0, 1) * step
+    blue_step = blue_step % blue_noise.shape[2]
+    shiftx += random.uniform(-1, 1) * step
+    shifty += random.uniform(-1, 1) * step
     shifts = (int(shiftx) % N, int(shifty) % N)
 
-    noise_this = torch.roll(blue_noise[:, :, 0], shifts=shifts, dims=(0, 1)) 
+    noise_this = torch.roll(blue_noise[:, :, blue_step], shifts=shifts, dims=(0, 1)) 
     beta = 12.0 + beta_randomization * (0.1 * noise_this -  0.05)
 step_beta()
 
