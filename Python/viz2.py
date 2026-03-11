@@ -57,20 +57,16 @@ for key, vals in series.items():
 
 all_power = np.array(all_power)
 
-# assume all same length
 N = len(signals[0])
 freqs = np.fft.rfftfreq(N)
 freqs_sim = freqs / SIM_STEPS_PER_SAMPLE
 
-# average spectrum
 mean_power = all_power.mean(axis=0)
 
-# ----- plotting -----
 
 fig, axes = plt.subplots(3,1,figsize=(10,9))
 fig.suptitle("Average spectrum across tracked points")
 
-# plot raw signals
 for s in signals:
     timesteps = np.arange(len(s)) * SIM_STEPS_PER_SAMPLE
     axes[0].plot(timesteps, s, alpha=0.5)
@@ -79,20 +75,17 @@ axes[0].set_xlabel("Sim iteration")
 axes[0].set_ylabel("a value")
 axes[0].set_title("Signals from tracked points")
 
-# power spectrum
 axes[1].plot(freqs_sim[1:], mean_power[1:])
 axes[1].set_xlabel("Frequency")
 axes[1].set_ylabel("Power")
 axes[1].set_title("Average power spectrum")
 
-# log-log
 valid = (freqs_sim > 0) & (mean_power > 0)
 log_f = np.log(freqs_sim[valid])
 log_p = np.log(mean_power[valid])
 
 axes[2].plot(log_f, log_p)
 
-# slope fit
 slope, intercept = np.polyfit(log_f, log_p, 1)
 axes[2].plot(log_f, slope*log_f + intercept, "--", label=f"Slope = {slope:.2f}")
 axes[2].legend()

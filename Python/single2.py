@@ -27,7 +27,7 @@ points_values = []
 middles = []
 
 blue_step = 0
-blue_noise = gen_blue_noise(N, N, N).to(device)
+blue_noise = gen_blue_noise(N, N, N//2).to(device)
 beta = 12.0 + (torch.rand((N, N), device=device) * 0.1 - 0.05)
 beta_randomization = 8.0
 
@@ -40,7 +40,7 @@ def step_beta(step=1):
         beta = 12.0 + beta_randomization * (torch.rand((N, N), device=device) * 0.1 - 0.05)
         return
 
-    blue_step += step
+    blue_step = (1664525 * blue_step + 1013904223);
     blue_step = blue_step % blue_noise.shape[2]
 
     this_iter = int(blue_step) % blue_noise.shape[2]

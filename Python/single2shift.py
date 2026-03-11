@@ -29,7 +29,7 @@ points_values = []
 middles = []
 
 blue_step = 0
-blue_noise = gen_blue_noise(N, N, 2).to(device)
+blue_noise = gen_blue_noise(N, N, N//2).to(device)
 beta = 12.0 + (torch.rand((N, N), device=device) * 0.1 - 0.05)
 beta_randomization = 8.0
 
@@ -38,7 +38,7 @@ use_blue_noise = True
 shiftx, shifty = 0, 0
 
 
-def step_beta(step=N/4):
+def step_beta(step=N):
     global beta, blue_step, shiftx, shifty
 
     if not use_blue_noise:
