@@ -14,7 +14,7 @@ device = torch.device("cuda")
 
 def until_reaction(r): return int(7336.347 / (r - 3.6470) + 3739.7676)
 
-N = 256
+N = 512
 dt = 0.5
 
 diff_rate = 0.005
@@ -29,16 +29,16 @@ points_values = []
 middles = []
 
 blue_step = 0
-blue_noise = gen_blue_noise(N, N, N//2).to(device)
+blue_noise = gen_blue_noise(N, N, N//4).to(device)
 beta = 12.0 + (torch.rand((N, N), device=device) * 0.1 - 0.05)
-beta_randomization = 8.0
+beta_randomization = 1.0
 
 use_blue_noise = True
 
 shiftx, shifty = 0, 0
 
 
-def step_beta(step=N/10):
+def step_beta(step=4):
     global beta, blue_step, shiftx, shifty
 
     if not use_blue_noise:
