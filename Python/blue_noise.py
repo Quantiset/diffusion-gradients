@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 device = torch.device("cuda")
 
-def gen_blue_noise(x, y, z, alpha=0.5):
+def gen_blue_noise(x, y, z, alpha=1.0):
     noise = torch.randn((x, y, z), device=device)
     fft = torch.fft.fftn(noise)
     fft = torch.fft.fftshift(fft)
