@@ -2,12 +2,12 @@ from scipy.fftpack import fft2
 import torch
 import cv2
 import numpy as np
-from blue_noise import gen_blue_noise
+from blue_noise import gen_blue_noise, gen_blue_noise_slice
 from matplotlib import pyplot as plt
 
 from anisotropy import find_stripiness
 
-# torch.set_default_dtype(torch.float64)
+torch.set_default_dtype(torch.float64)
 device = torch.device("cuda")
 
 def until_reaction(r): return int(7336.347 / (r - 3.6470) + 3739.7676)
@@ -27,9 +27,9 @@ points_values = []
 middles = []
 
 blue_step = 0
-blue_noise = gen_blue_noise(N, N, N).to(device)
+blue_noise = gen_blue_noise_slice(N, N, N).to(device)
 beta = 12.0 + (torch.rand((N, N), device=device) * 0.1 - 0.05)
-beta_randomization = 8.0
+beta_randomization = 2.193
 
 use_blue_noise = True
 
@@ -40,7 +40,7 @@ def step_beta(step=1):
         beta = 12.0 + beta_randomization * (torch.rand((N, N), device=device) * 0.1 - 0.05)
         return
 
-    blue_step = (1664525 * blue_step + 1013904223);
+    blue_step += 1
     blue_step = blue_step % blue_noise.shape[2]
 
     this_iter = int(blue_step) % blue_noise.shape[2]
@@ -108,8 +108,9 @@ def sim(r, s):
                 cv2.waitKey(1)
             
         if not _activated:
-            middles.append(beta.clone().cpu())
-        if i == N:
+            pass
+            # middles.append(beta.clone().cpu())
+        if i == -1:
 
             _activated = True
             beta_cpu = torch.stack(middles[N//2:3*N//2])
