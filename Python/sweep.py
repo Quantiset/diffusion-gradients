@@ -2,7 +2,6 @@ import torch
 import cv2
 import numpy as np
 from blue_noise import gen_blue_noise
-from anisotropy import find_stripiness
 
 torch.set_default_dtype(torch.float64)
 device = torch.device("cpu")

@@ -2,8 +2,6 @@ import torch
 import cv2
 import numpy as np
 
-from anisotropy import find_stripiness
-
 device = torch.device("cuda")
 
 N = 256
@@ -58,7 +56,6 @@ def sim(r, s, max_steps=10000):
 
     img_np = a.cpu().numpy()
     current_max = img_np.max()
-    stripiness = find_stripiness(a, device)
 
     return {
         'r': r,
@@ -66,7 +63,6 @@ def sim(r, s, max_steps=10000):
         'min': img_np.min(),
         'max': current_max,
         'volatility': abs(current_max - last_max) if last_max is not None else 0.0,
-        'stripiness': stripiness
     }
 
 r_values = np.linspace(1, 20, 15)

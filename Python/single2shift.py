@@ -7,8 +7,6 @@ import numpy as np
 from blue_noise import gen_blue_noise, gen_blue_noise_slice, plot_3d
 from matplotlib import pyplot as plt
 
-from anisotropy import find_stripiness
-
 # torch.set_default_dtype(torch.float64)
 device = torch.device("cuda")
 
@@ -16,7 +14,7 @@ def until_reaction(r): return int(7336.347 / (r - 3.6470) + 3739.7676)
 
 N = 1500
 dt = 1.5
-beta_randomization = 0.593
+beta_randomization = 0.493
 blue_epoch = 5
 
 diff_rate = 0.005

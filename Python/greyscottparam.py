@@ -3,8 +3,6 @@ import torch
 import cv2
 import numpy as np
 
-from anisotropy import find_stripiness
-
 torch.set_default_dtype(torch.float64)
 device = torch.device("cuda")
 

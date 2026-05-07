@@ -4,7 +4,6 @@ import numpy as np
 from blue_noise import gen_blue_noise
 from collections import deque
 
-from anisotropy import find_stripiness
 import matplotlib.pyplot as plt
 
 torch.set_default_dtype(torch.float64)
