@@ -27,7 +27,7 @@ points_values = []
 middles = []
 
 blue_step = 0
-blue_noise = gen_blue_noise_slice(N, N, N).to(device)
+blue_noise = gen_blue_noise_slice(N, N, N, 0.1).to(device)
 beta = 12.0 + (torch.rand((N, N), device=device) * 0.1 - 0.05)
 beta_randomization = 2.193
 

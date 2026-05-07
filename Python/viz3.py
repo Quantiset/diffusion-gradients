@@ -4,23 +4,24 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import random
-from blue_noise import gen_blue_noise, gen_blue_noise_slice
+from blue_noise import gen_blue_noise, gen_blue_noise_slice, plot_3d
 
 # device = torch.device("cuda")
 device = torch.device("cpu")
 
-noise = gen_blue_noise(512, 512, 1).cpu().numpy()
+noise = gen_blue_noise(256, 256, 256, 30).cpu().numpy()
 
 ptr = (256,256)
 horizontal = []
+rez = 0
 for i in range(255):
-    horizontal.append(math.sqrt((ptr[0] - 256)**2 + (ptr[1] - 256)**2))
+    horizontal.append(rez)
+    rez += random.randint(-1,1)
     dist = 1
     ret = random.choice([(dist,0), (-dist,0), (0,dist), (0,-dist)])
     ptr = (ptr[0] + ret[0], ptr[1] + ret[1])
     ptr = (ptr[0] % noise.shape[0], ptr[1] % noise.shape[1])
     print(ptr)
-# horizontal = noise[0, :, 0]
 
 N = len(horizontal)
 freqs = np.fft.rfftfreq(N)

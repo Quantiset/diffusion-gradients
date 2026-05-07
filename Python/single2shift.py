@@ -4,7 +4,7 @@ from scipy.fftpack import fft2
 import torch
 import cv2
 import numpy as np
-from blue_noise import gen_blue_noise
+from blue_noise import gen_blue_noise, gen_blue_noise_slice, plot_3d
 from matplotlib import pyplot as plt
 
 from anisotropy import find_stripiness
@@ -14,10 +14,10 @@ device = torch.device("cuda")
 
 def until_reaction(r): return int(7336.347 / (r - 3.6470) + 3739.7676)
 
-N = 256
-dt = 0.5
-beta_randomization = 2.193
-blue_epoch = 20
+N = 1500
+dt = 1.5
+beta_randomization = 0.593
+blue_epoch = 5
 
 diff_rate = 0.005
 blue_steps_per_reaction_step = 2 / until_reaction(4)
@@ -31,7 +31,7 @@ points_values = []
 middles = []
 
 blue_step = 0
-blue_noise = gen_blue_noise(N, N, N).to(device)
+blue_noise = gen_blue_noise_slice(N, N, N//32, 0.67).to(device)
 beta = 12.0 + (torch.rand((N, N), device=device) * 0.1 - 0.05)
 
 use_blue_noise = True
@@ -116,70 +116,7 @@ def sim(r, s):
         if i == N:
 
             _activated = True
-            beta_cpu = torch.stack(middles[N//2:3*N//2])
-
-            field_vis = beta_cpu[beta_cpu.shape[0] // 2].numpy()
-            field_vis = (field_vis - field_vis.min()) / (field_vis.max() - field_vis.min() + 1e-6)
-
-            plt.figure()
-            plt.imshow(field_vis, aspect='auto', cmap='gray')
-            plt.xlabel("x")
-            plt.ylabel("y")
-            plt.title("Middle time slice of beta volume")
-            plt.colorbar()
-            plt.show()
-
-            T = beta_cpu.shape[0]
-
-            field = beta_cpu - beta_cpu.mean()
-
-            fft3 = torch.fft.fftn(field)
-            power3 = torch.abs(fft3) ** 2
-
-            ft = torch.fft.fftfreq(T)
-            fx = torch.fft.fftfreq(field.shape[1])
-            fy = torch.fft.fftfreq(field.shape[2])
-
-            kt, kx, ky = torch.meshgrid(ft, fx, fy, indexing='ij')
-
-            freqs = torch.sqrt(kt**2 + kx**2 + ky**2)
-
-            freqs_flat = freqs.flatten()
-            p_flat = power3.flatten()
-
-            mask = freqs_flat > 0
-            k_np = freqs_flat[mask].detach().cpu().numpy()
-            p_np = p_flat[mask].detach().cpu().numpy()
-
-            num_bins = 100
-            bins = np.linspace(k_np.min(), k_np.max(), num_bins)
-            bin_centers = 0.5 * (bins[:-1] + bins[1:])
-            radial_power = np.zeros(num_bins - 1)
-            for j in range(len(bins) - 1):
-                mask = (k_np >= bins[j]) & (k_np < bins[j+1])
-                if np.any(mask):
-                    radial_power[j] = p_np[mask].mean()
-                else:
-                    radial_power[j] = np.nan
-            k_fit = bin_centers[(bin_centers > np.percentile(bin_centers, 15)) & (bin_centers < np.percentile(bin_centers, 90))]
-            radial_power_fit = radial_power[(bin_centers > np.percentile(bin_centers, 15)) & (bin_centers < np.percentile(bin_centers, 90))]
-
-            log_k = np.log(k_fit)
-            log_p = np.log(radial_power_fit)
-
-            slope, intercept = np.polyfit(log_k, log_p, 1)
-
-            plt.figure()
-            plt.plot(log_k, log_p, label="")
-            plt.plot(log_k, slope * log_k + intercept,
-                    label=f"Slope = {slope:.2f}")
-            plt.xlabel("log freq")
-            plt.ylabel("log strength")
-            plt.title("Beta volume 3D radial power spectrum")
-            plt.legend()
-            plt.show() 
-
-            print("Estimated alpha:", slope)
+            plot_3d(torch.stack(middles[N//2:3*N//2]))
         
         step_beta()
         # if i % (blue_steps_per_reaction_step * until_reaction(r)) == 0 and i > 10:
