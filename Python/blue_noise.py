@@ -109,6 +109,3 @@ def plot_3d(img):
 
     print("Estimated alpha:", slope)
 
-
-if __name__ == "__main__":
-    show_noise()
