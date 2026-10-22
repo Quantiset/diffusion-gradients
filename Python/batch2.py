@@ -106,7 +106,8 @@ def sim(r, s):
         if i % 400 == 1:
             img_np = a.cpu().numpy()
             img = (img_np - img_np.min()) / (img_np.max() - img_np.min() + 0.001)
-            cv2.imshow("RD", img)
+            
+            cv2.imwrite(f"img_{float(sys.argv[1])}_{float(sys.argv[2])}_{float(sys.argv[3])}_{float(sys.argv[4])}_{float(sys.argv[5])}_{float(sys.argv[6])}_{int(sys.argv[7])}_{float(sys.argv[8])}.png", img * 255)
 
             key = cv2.waitKey(1) & 0xFF
 
