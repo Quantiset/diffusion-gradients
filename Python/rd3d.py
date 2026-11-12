@@ -1,11 +1,7 @@
-"""Reaction-diffusion on a 3D tetrahedral mesh (cone shell or box slab).
+"""
 
-Same reaction terms, noisy beta and explicit Euler as converge_test.py / batch2.py.
 The Laplacian follows NewtonBioMorphX (Jahanbakhsh & Milinkovitch 2027, Sec. 3 and
-src/nvrtc_kernels/compute_force_default.cu): per tetrahedron the gradient is constant
-(Eq. 20); flux D*grad(c) is pushed to the 4 nodes through the opposite face area
-vectors / 3 (Eq. 34, written here as V_e * grad(N_r), which is the same vector);
-then divided by the nodal volume (Eq. 22). Free surfaces are zero-flux automatically.
+src/nvrtc_kernels/compute_force_default.cu): 
 
 python rd3d.py --noise blue  --shape cone --out runs/r8_3d/blue.png
 python rd3d.py --noise white --shape box  --out runs/r8_3d/white_box.png
@@ -31,11 +27,10 @@ p.add_argument("--seed", type=int, default=0)
 p.add_argument("--out", required=True)
 args = p.parse_args()
 
-# geometry (mesh spacing 1 = one pixel of the 2D runs, so the pattern scale matches)
 h = 1.0
-THICK = 3.0                       # shell / slab thickness
-R1, R0, H = 100.0, 46.92, 314.0   # cone: the Godot cone (1, 0.4692, 3.14) scaled by 100
-BOX = 512                         # box: BOX x BOX x THICK
+THICK = 64.0 
+R1, R0, H = 100.0, 46.92, 314.0 
+BOX = 64
 dt_max, d, beta_rand = 0.5, 0.005, 0.873
 blue_epoch, blue_slices, blue_alpha = 2, 4, 0.8
 check, tol, patience = 20_000, 2e-4, 3
@@ -45,13 +40,12 @@ torch.manual_seed(args.seed)
 dev = torch.device("cuda")
 torch.set_default_dtype(torch.float32)
 
-# ---- structured mesh: i around / across, j along / up, k through the thickness ----
 nk = round(THICK / h)
 if args.shape == "cone":
     ni, nj, wrap = round(2 * math.pi * R1 / h), round(math.hypot(H, R1 - R0) / h), True
     I, J, K = np.meshgrid(np.arange(ni), np.arange(nj + 1), np.arange(nk + 1), indexing="ij")
-    th, t = 2 * math.pi * I / ni, J / nj                    # Theta = atan2(Z, X) as in the paper
-    beta_n = math.atan2(R1 - R0, H)                         # surface normal tilt
+    th, t = 2 * math.pi * I / ni, J / nj 
+    beta_n = math.atan2(R1 - R0, H)
     off = (K / nk - 0.5) * THICK
     R = R1 + (R0 - R1) * t + off * math.cos(beta_n)
     pos = np.stack([R * np.cos(th), -H / 2 + H * t + off * math.sin(beta_n), R * np.sin(th)], -1)
@@ -69,7 +63,6 @@ def idx(i, j, k):
     return (i * shape[1] + j) * shape[2] + k
 
 
-# split each hex cell into 6 tets around its 000-111 diagonal (conforming everywhere)
 ci, cj, ck = (x.ravel() for x in np.meshgrid(np.arange(ni), np.arange(nj), np.arange(nk), indexing="ij"))
 corner = lambda b: idx(ci + b[0], cj + b[1], ck + b[2])
 tets = []
@@ -79,16 +72,13 @@ for a, b in [(0, 1), (0, 2), (1, 0), (1, 2), (2, 0), (2, 1)]:
     tets.append(np.stack([corner((0, 0, 0)), corner(e1), corner(e2), corner((1, 1, 1))], 1))
 tets = torch.tensor(np.concatenate(tets), device=dev)
 
-# per-tet shape-function gradients G (T,4,3) and volumes; nodal volumes (Eq. 22)
 x = pos[tets]
-Jx = (x[:, 1:] - x[:, :1]).transpose(1, 2)                  # Eq. 21
+Jx = (x[:, 1:] - x[:, :1]).transpose(1, 2) 
 Jinv = torch.linalg.inv(Jx)
-G = torch.cat([-Jinv.sum(1, keepdim=True), Jinv], 1)        # grad N_1..4 (Eq. 53)
-Vt = torch.linalg.det(Jx).abs() / 6                          # Eq. 23
+G = torch.cat([-Jinv.sum(1, keepdim=True), Jinv], 1) 
+Vt = torch.linalg.det(Jx).abs() / 6 
 Vn = torch.zeros(len(pos), device=dev).index_add_(0, tets.ravel(), Vt.repeat_interleave(4) / 4)
-# Eq. 34 with flux D*grad(c): node r of tet e gets -V_e * grad(N_r) . grad(c), and
-# grad(c) = sum_q c_q grad(N_q). That is linear in c, so assemble it once as a sparse
-# matrix (the paper does the same sum with atomicAdd every step).
+
 n = len(pos)
 Ke = (-Vt[:, None, None] * G @ G.transpose(1, 2) / Vn[tets][:, :, None]).reshape(-1)   # (T*16)
 del G, Jinv, x
@@ -104,14 +94,12 @@ def lap(c):
     return L @ c
 
 
-# explicit Euler is stable while dt * D * lambda_max < 2; lambda_max by power iteration
 v = torch.rand(len(pos), device=dev)
 for _ in range(60):
     v = -lap(v); lam = v.norm().item(); v /= lam
 dt = min(dt_max, 1.8 / (max(args.r, args.s) * lam))
 print(f"{len(pos)} nodes, {len(tets)} tets, lambda_max {lam:.2f}, dt {dt:.3f}")
 
-# ---- noisy beta, same recipe as batch2.py (blue noise indexed by the (i, j) grid) ----
 if args.noise == "blue":
     blue = gen_blue_noise_slice(shape[0], shape[1], blue_slices, blue_alpha).to(dev, torch.float32)
 step_n, sx, sy = 0, 0, 0
@@ -130,7 +118,7 @@ def next_beta():
     return 12.0 + beta_rand * (0.1 * sl[:, :, None].expand(shape).reshape(-1) - 0.05)
 
 
-def save(path, c):  # outer surface (k = last) as an image: rows = j (top up), cols = i
+def save(path, c):  
     img = c.view(shape)[:, :, -1].T.flip(0).cpu().numpy()
     cv2.imwrite(path, ((img - img.min()) / (img.max() - img.min() + 1e-6) * 255).astype(np.uint8))
 
@@ -157,7 +145,6 @@ save(args.out, a)
 np.savez(args.out.replace(".png", ".npz"), pos=pos.cpu().numpy(), tets=tets.cpu().numpy(),
          a=a.cpu().numpy(), shape=np.array(shape))
 
-# outer surface as a coloured PLY (opens in Blender / MeshLab / Godot)
 o = np.arange(len(pos)).reshape(shape)[:, :, -1]
 o1 = np.roll(o, -1, 0)                                      # next i (wraps around the cone)
 quads = np.stack([o[:ni, :-1], o1[:ni, :-1], o1[:ni, 1:], o[:ni, 1:]], -1).reshape(-1, 4)
