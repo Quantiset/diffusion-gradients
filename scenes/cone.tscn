@@ -1,0 +1,41 @@
+[gd_scene format=3 uid="uid://jmndf0pwdjbk"]
+
+[ext_resource type="Shader" uid="uid://ct16alcrru66o" path="res://scenes/cone.gdshader" id="1_04qlx"]
+[ext_resource type="Texture2D" path="res://Python/runs/final/rd_front_N2048_rho4.01.png" id="2_1pvhk"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_1pvhk"]
+render_priority = 0
+shader = ExtResource("1_04qlx")
+shader_parameter/height = 3.14
+shader_parameter/unroll = true
+shader_parameter/bottom_radius = 1.0
+shader_parameter/top_radius = 0.4692
+shader_parameter/tile_world = 8.0
+shader_parameter/apex_uv = Vector2(0.38993, 0.48635)
+shader_parameter/sector_rot = 0.45606
+shader_parameter/lattice_fix = Transform2D(0.87502, 0.00026, 0.00028, 0.83521, 0, 0)
+shader_parameter/tex = ExtResource("2_1pvhk")
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_666jn"]
+lightmap_size_hint = Vector2i(33, 24)
+material = SubResource("ShaderMaterial_1pvhk")
+top_radius = 0.4692
+bottom_radius = 1.0
+height = 3.14
+radial_segments = 256
+rings = 32
+
+[sub_resource type="Environment" id="Environment_1pvhk"]
+background_mode = 2
+ambient_light_color = Color(1, 1, 1, 1)
+
+[node name="Node3D" type="Node3D" unique_id=259831905]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=952629939]
+mesh = SubResource("CylinderMesh_666jn")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1544637221]
+transform = Transform3D(1, 0, 0, 0, 0.89145774, 0.45310387, 0, -0.45310387, 0.89145774, 0, 1.3168719, 2.4755805)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1997607020]
+environment = SubResource("Environment_1pvhk")

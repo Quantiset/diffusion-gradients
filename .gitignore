@@ -4,3 +4,8 @@
 */__pycache__/*
 /android/
 *.swp
+*.import
+*.uid
+Python/saves
+Python/runs
+Python/venv
